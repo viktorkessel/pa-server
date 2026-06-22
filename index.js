@@ -206,8 +206,9 @@ app.post("/generate-pa", async (req, res) => {
     const today = new Date().toLocaleDateString("fr-FR").replace(/\//g,"-");
     const fileName = `PA_${client}_${today}.pptx`;
 
-    // Upload dans Drive
-    const result = await uploadToDrive(tmpFile, fileName, folderId);
+    // Lire le fichier en base64
+    const fileBuffer = fs.readFileSync(tmpFile);
+    const base64Content = fileBuffer.toString("base64");
 
     // Nettoyage
     fs.unlinkSync(tmpFile);
@@ -215,10 +216,10 @@ app.post("/generate-pa", async (req, res) => {
     res.json({
       success: true,
       client,
-      action: result.action,
-      fileId: result.fileId,
       fileName,
-      driveUrl: `https://drive.google.com/file/d/${result.fileId}`
+      folderId,
+      mimeType: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      fileContent: base64Content
     });
 
   } catch (err) {
