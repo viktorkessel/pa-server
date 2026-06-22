@@ -1,0 +1,15 @@
+{
+  "name": "sb-conseil-pa-server",
+  "version": "1.0.0",
+  "description": "PA Generator Server for SB Conseil",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "pptxgenjs": "^4.0.1",
+    "googleapis": "^140.0.0",
+    "google-auth-library": "^9.0.0"
+  }
+}
