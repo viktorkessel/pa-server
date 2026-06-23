@@ -228,5 +228,118 @@ app.post("/generate-pa", async (req, res) => {
   }
 });
 
+// ─── DONNÉES PA PAR CLIENT ─────────────────────────────────────────────────
+
+const PA_DATA = {
+  qynapse: {
+    mission: "Partenariats industriels Europe & Série A",
+    depuis: "01/06/2026",
+    recents: [
+      "17/06 — Call Philips (Nader, Charles) — intérêt partenariat confirmé",
+      "18/06 — C/R interne validé — C/R externe envoyé à Nader et Charles",
+      "18/06 — Call Brainomix (Jérôme Galbrun) — CEO veut rencontrer Qynapse",
+      "22/06 — Call suivi Philips 8/07 à 9h confirmé",
+      "22/06 — Call Olivier : Monaco acté, piste Gopi 2/HCL, bridge financement prioritaire"
+    ],
+    initiatives: [
+      {
+        num:"1", title:"PHILIPS", goal:"LOI/MOU avant JFR (oct. 2026)",
+        rows:[
+          ["URGENT","Préparer call 8/07 : Monaco pilote, périmètre JFR, piste Gopi 2/HCL Coton","Stéphane + Olivier","08/07"],
+          ["URGENT","Confirmer Monaco — appel direct Charles","Stéphane + Charles","Avant 08/07"],
+          ["PRIO","Activer piste Gopi 2 : intégrer Qynapse dans offre Philips-HCL Lyon","Stéphane + Olivier","08/07"],
+          ["PRIO","LOI / MOU signé par Nader — levier Série A","Stéphane","30/09"],
+          ["NORMAL","2-3 features exclusives Philips + biz model anti-margin squeeze","Stéphane + Olivier","30/09"]
+        ]
+      },
+      {
+        num:"2", title:"BRAINOMIX", goal:"Visio intro sem. 29/06 — term sheet H1 2027",
+        rows:[
+          ["URGENT","Créneaux visio à Jérôme (Olivier : lun, mar AM, jeu >15h)","Stéphane → Jérôme","Cette sem."],
+          ["URGENT","Envoyer deck Qynapse EN à Jérôme","Olivier","Cette sem."],
+          ["PRIO","Brief Olivier : complémentarité stroke/neuro-dégén., vigilance rachat","Stéphane","Avant visio"],
+          ["NORMAL","Structure cible : co-distrib. 600 hôpitaux, rev-share, option intégration","Stéphane + Olivier","Avant visio"]
+        ]
+      },
+      {
+        num:"3", title:"CONSTRUCTEURS IRM", goal:"1er accord Europe H1 2027",
+        rows:[
+          ["PRIO","Canon Medical — contacter Franck Girard","Stéphane","Juillet"],
+          ["NORMAL","United Imaging — contacter Alex Ripert","Stéphane + Olivier","Septembre"],
+          ["VEILLE","Siemens (Pasquier, Lavirotte) — contact maintenu, pas de push","Stéphane","Q4 2026"]
+        ]
+      },
+      {
+        num:"4", title:"FINANCEMENT", goal:"Bridge 500-700K€ juillet — Série A Q4 2026",
+        rows:[
+          ["URGENT","Bridge 500-700K€ — actionnaires historiques, val. 5-10M€ pre-money","Olivier + Lionel","Juillet"],
+          ["PRIO","Annexe A investisseurs (liste SB Conseil) → Olivier","Stéphane → Olivier","03/07"],
+          ["PRIO","Session Lionel : narratif, deck, BA / family office / Capital Cell","Stéphane + Lionel","Juillet"]
+        ]
+      },
+      {
+        num:"5", title:"VOICE OF CUSTOMER", goal:"2-3 interviews avant fin septembre",
+        rows:[
+          ["PRIO","2-3 entretiens cliniciens sur QyScore v1 + attentes v2.0","Stéphane","30/09"],
+          ["NORMAL","3 visites terrain avec Aline — synthèse VOC → R&D","Stéphane + Aline","30/09 / Oct."]
+        ]
+      },
+      {
+        num:"6", title:"GOUVERNANCE", goal:"Rythme installé avant fin juillet",
+        rows:[
+          ["FAIT","Visio Olivier / Stéphane 22/06 18h — PA validé","Stéphane + Olivier","22/06 ✓"],
+          ["PRIO","Mail Qynapse + accès Slack — ce PA = document de suivi mission","Olivier","Juillet"],
+          ["NORMAL","Rencontre physique équipe Qynapse (Aline)","Olivier","Q3 2026"]
+        ]
+      }
+    ],
+    actions_isolees: [
+      ["PRIO","Préparer deck Qynapse EN pour Jérôme Galbrun (version investor-ready)","Stéphane + Olivier","Cette sem."],
+      ["PRIO","Qualifier plateforme crowdfunding Capital Cell — présenter à Lionel","Stéphane → Lionel","Juillet"]
+    ],
+    hors_scope: [
+      ["VEILLE","Marketplaces IA (Incepto, Aidoc) — à qualifier Q3 2026","Stéphane","Q3 2026"],
+      ["VEILLE","Licensing pharma / CRO — process Olivier en cours, hors scope SB Conseil","Olivier","Oct. 2026"],
+      ["VEILLE","GE Healthcare — déprioritisé post-acquisition Icometrix","—","—"]
+    ]
+  }
+};
+
+// Route simplifiée : juste {"client":"qynapse"} suffit
+app.post("/generate-pa/simple", async (req, res) => {
+  try {
+    const { client } = req.body;
+    if (!client) return res.status(400).json({error:"client requis"});
+
+    const clientKey = client.toLowerCase().replace(/[^a-z]/g,"");
+    const folderId = DRIVE_FOLDERS[clientKey];
+    if (!folderId) return res.status(400).json({error:`Client inconnu: ${client}`});
+
+    const paData = PA_DATA[clientKey];
+    if (!paData) return res.status(400).json({error:`Pas de données PA pour: ${client}`});
+
+    const today = new Date().toLocaleDateString("fr-FR").replace(/\//g,"-");
+    const tmpFile = await generatePPTX({client, date: today, ...paData});
+    const fileName = `PA_${client}_${today}.pptx`;
+
+    const fileBuffer = fs.readFileSync(tmpFile);
+    const base64Content = fileBuffer.toString("base64");
+    fs.unlinkSync(tmpFile);
+
+    res.json({
+      success: true,
+      client,
+      fileName,
+      folderId,
+      mimeType: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      fileContent: base64Content
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({error: err.message});
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`PA Server running on port ${PORT}`));
